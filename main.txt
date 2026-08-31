@@ -1,0 +1,59 @@
+module top_fault_detection_tb;
+
+// Internal signals
+reg clk;
+reg reset;
+reg heartbeat;
+reg sensor_data_valid;
+reg comm_status;
+
+wire fault_flag;
+wire [2:0] fault_type;
+
+// Instantiate DUT
+fault_detection_unit_v2 uut (
+    .clk(clk),
+    .reset(reset),
+    .heartbeat(heartbeat),
+    .sensor_data_valid(sensor_data_valid),
+    .comm_status(comm_status),
+    .fault_flag(fault_flag),
+    .fault_type(fault_type)
+);
+
+// Clock generation
+always #5 clk = ~clk;  // 10ns clock
+
+initial begin
+    // Initialize
+    clk = 0;
+    reset = 1;
+    heartbeat = 0;
+    sensor_data_valid = 1;
+    comm_status = 1;
+
+    #10 reset = 0;
+
+    // Normal operation (heartbeat toggling)
+    repeat(20)
+    begin
+        #10 heartbeat = ~heartbeat;
+    end
+
+    // Stop heartbeat → Watchdog fault
+    #200;
+
+    // Sensor fault
+    sensor_data_valid = 0;
+    #50;
+    sensor_data_valid = 1;
+
+    // Communication fault
+    comm_status = 0;
+    #50;
+    comm_status = 1;
+
+    #100 $stop;
+end
+
+endmodule
